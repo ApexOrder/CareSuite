@@ -1,0 +1,6 @@
+{
+  "name": "CareSuite",
+  "description": "Production-ready care management platform for domiciliary care providers including Rota, Staff, and Client management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["Multi-tenancy", "RBAC", "Care Management"]
+}

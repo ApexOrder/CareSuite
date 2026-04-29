@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-emerald-50: #ecfdf5;
+  --color-brand-emerald-100: #d1fae5;
+  --color-brand-emerald-200: #a7f3d0;
+  --color-brand-emerald-300: #6ee7b7;
+  --color-brand-emerald-400: #34d399;
+  --color-brand-emerald-500: #10b981;
+  --color-brand-emerald-600: #059669;
+  --color-brand-emerald-700: #047857;
+  --color-brand-emerald-800: #064e3b;
+  --color-brand-emerald-900: #064e3b;
+  --color-brand-emerald-950: #022c22;
+
+  --color-app-bg: #050706;
+  --color-app-sidebar: #0a0c0b;
+  --color-app-card: #111413;
+  --color-app-card-header: #151917;
+  --color-app-border: rgba(6, 78, 59, 0.2); /* emerald-900/20 */
+  --color-app-border-strong: rgba(6, 78, 59, 0.3); /* emerald-900/30 */
+}
+
+@layer base {
+  body {
+    @apply bg-[family-name:--color-app-bg] text-slate-200 font-sans antialiased;
+  }
+}
+
+.premium-card {
+  @apply bg-[family-name:--color-app-card] border border-[family-name:--color-app-border] rounded-xl overflow-hidden transition-all duration-200 hover:border-brand-emerald-900/40;
+}
+
+.emerald-gradient {
+  @apply bg-emerald-500;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 transition-all hover:bg-slate-800/50 hover:text-slate-200;
+}
+
+.sidebar-link-active {
+  @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium;
+}
+
+.stat-card {
+  @apply bg-[family-name:--color-app-card] p-5 rounded-xl border border-[family-name:--color-app-border] shadow-sm;
+}
+
+.table-row-hover {
+  @apply hover:bg-emerald-500/[0.02] transition-colors;
+}
+
+.badge-emerald {
+  @apply px-2.5 py-1 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase tracking-wider;
+}
+
+.form-input {
+  @apply w-full bg-[#050706] border border-emerald-900/30 rounded-xl px-4 py-3 text-white focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm;
+}

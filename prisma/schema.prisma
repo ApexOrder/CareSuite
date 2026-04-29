@@ -1,0 +1,492 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id                 String   @id @default(uuid())
+  name               String
+  tradingName        String?
+  email              String
+  phone              String?
+  addressLine1       String?
+  addressLine2       String?
+  town               String?
+  postcode           String?
+  cqcProviderId      String?
+  subscriptionStatus String   @default("TRIAL") // TRIAL, ACTIVE, SUSPENDED
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  users              User[]
+  roles              Role[]
+  clients            Client[]
+  staff              Staff[]
+  visits             Visit[]
+  actions            Action[]
+  risks              Risk[]
+  medications        Medication[]
+  medicationOrders   MedicationOrder[]
+  carePlans          CarePlan[]
+  audits             Audit[]
+  activityLogs       ActivityLog[]
+  notifications      Notification[]
+  attachments        Attachment[]
+}
+
+model User {
+  id           String    @id @default(uuid())
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id])
+  roleId       String
+  role         Role      @relation(fields: [roleId], references: [id])
+  name         String
+  email        String    @unique
+  passwordHash String
+  status       String    @default("ACTIVE") // ACTIVE, DISABLED
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  actions      Action[]
+  ownedRisks   Risk[]    @relation("RiskOwner")
+  conductedAudits Audit[]
+  activityLogs    ActivityLog[]
+  notifications   Notification[]
+  uploadedAttachments Attachment[] @relation("UserUploads")
+
+  @@index([companyId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  title     String
+  message   String
+  type      String   // INFO, WARNING, SUCCESS, ERROR, ALERT
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([userId])
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  companyId   String
+  company     Company          @relation(fields: [companyId], references: [id])
+  name        String
+  description String?
+  isSystem    Boolean          @default(false)
+  permissions RolePermission[]
+  users       User[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([companyId, name])
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  key         String           @unique // e.g. clients.view
+  group       String // e.g. Clients
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model Staff {
+  id                   String    @id @default(uuid())
+  companyId            String
+  company              Company   @relation(fields: [companyId], references: [id])
+  firstName            String
+  lastName             String
+  dateOfBirth          DateTime?
+  email                String?
+  phone                String?
+  addressLine1         String?
+  addressLine2         String?
+  town                 String?
+  postcode             String?
+  jobTitle             String?
+  employmentStatus     String    @default("ACTIVE") // ACTIVE, ARCHIVED
+  startDate            DateTime?
+  contractedHours      Float?
+  emergencyContactName String?
+  emergencyContactPhone String?
+  notes                String?
+  archivedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  visits               Visit[]
+  actions              Action[]
+  linkedRisks          Risk[]
+  linkedAudits         Audit[]
+  medicationAdministrations MedicationAdministration[]
+
+  @@index([companyId])
+}
+
+model Client {
+  id                        String    @id @default(uuid())
+  companyId                 String
+  company                   Company   @relation(fields: [companyId], references: [id])
+  firstName                 String
+  lastName                  String
+  dateOfBirth               DateTime?
+  addressLine1              String?
+  addressLine2              String?
+  town                      String?
+  postcode                  String?
+  phone                     String?
+  email                     String?
+  carePackageStatus         String    @default("ACTIVE") // ACTIVE, ARCHIVED
+  fundingType               String?
+  primaryContactName        String?
+  primaryContactPhone       String?
+  primaryContactRelationship String?
+  notes                     String?
+  archivedAt                DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  visits                    Visit[]
+  medications               Medication[]
+  medicationOrders          MedicationOrder[]
+  carePlans                 CarePlan[]
+  linkedRisks               Risk[]
+  linkedAudits              Audit[]
+  medicationAdministrations MedicationAdministration[]
+
+  @@index([companyId])
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  actionType  String   // CREATE, UPDATE, DELETE, ARCHIVE, STATUS_CHANGE, COMPLETE, REGISTER
+  entityType  String   // Client, Staff, Visit, Action, Risk, Audit, Medication, MAR
+  entityId    String?
+  description String
+  metadata    String?  // JSON string
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([entityType, entityId])
+}
+
+model Visit {
+  id                 String    @id @default(uuid())
+  companyId          String
+  company            Company   @relation(fields: [companyId], references: [id])
+  clientId           String
+  client             Client    @relation(fields: [clientId], references: [id])
+  staffId            String?
+  staff              Staff?    @relation(fields: [staffId], references: [id])
+  scheduledStart     DateTime
+  scheduledEnd       DateTime
+  actualStart        DateTime?
+  actualEnd          DateTime?
+  status             String    @default("SCHEDULED") // SCHEDULED, ASSIGNED, IN_PROGRESS, COMPLETED, LATE, MISSED, CANCELLED, NO_ACCESS
+  visitType          String?
+  notes              String?
+  cancellationReason String?
+  noAccessReason     String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([clientId])
+  @@index([staffId])
+}
+
+model Action {
+  id               String    @id @default(uuid())
+  companyId        String
+  company         Company   @relation(fields: [companyId], references: [id])
+  title            String
+  description      String
+  sourceType       String    @default("Manual") // Manual, Audit, Risk, Incident, Medication, Visit
+  sourceId         String?
+  assignedToUserId String?
+  assignedToUser   User?     @relation(fields: [assignedToUserId], references: [id])
+  assignedToStaffId String?
+  assignedToStaff  Staff?    @relation(fields: [assignedToStaffId], references: [id])
+  priority         String    @default("Medium") // Low, Medium, High, Critical
+  status           String    @default("Open") // Open, In Progress, Completed, Overdue, Cancelled
+  dueDate          DateTime?
+  completedAt      DateTime?
+  completionNotes  String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+model Risk {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
+  title           String
+  description     String
+  category        String    @default("Client") // Client, Staff, Medication, Safeguarding, Infection Control, Environmental, Operational, Compliance
+  likelihood      String    @default("Medium") // Low, Medium, High
+  impact          String    @default("Medium") // Low, Medium, High
+  riskLevel       String    @default("Medium") // Low, Medium, High, Critical
+  controls        String?
+  status          String    @default("Open")   // Open, Monitoring, Resolved, Archived
+  reviewDate      DateTime?
+  notes           String?
+  
+  // Relations
+  ownerUserId     String?
+  ownerUser       User?     @relation("RiskOwner", fields: [ownerUserId], references: [id])
+  
+  linkedClientId  String?
+  linkedClient    Client?   @relation(fields: [linkedClientId], references: [id])
+  
+  linkedStaffId   String?
+  linkedStaff     Staff?    @relation(fields: [linkedStaffId], references: [id])
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+model Medication {
+  id                  String    @id @default(uuid())
+  companyId           String
+  company             Company   @relation(fields: [companyId], references: [id])
+  clientId            String
+  client              Client    @relation(fields: [clientId], references: [id])
+  medicationName      String
+  strength            String?
+  form                String?   // Tablet, Liquid, Cream, etc.
+  route               String?   // Oral, Topical, etc.
+  dose                String?
+  dosageInstructions  String
+  frequency           String
+  medicationType      String    @default("Regular") // Regular, PRN, Topical, Controlled Drug, Other
+  isPRN               Boolean   @default(false)
+  prnGuidance         String?
+  prnReason           String?
+  maxDose24Hours      String?
+  isTopical           Boolean   @default(false)
+  bodyMapNotes        String?
+  startDate           DateTime
+  endDate             DateTime?
+  prescribedBy        String?
+  pharmacy            String?
+  status              String    @default("Active") // Active, Discontinued, On Hold
+  reviewDate          DateTime?
+  riskNotes           String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  orderItems          MedicationOrderItem[]
+  administrations     MedicationAdministration[]
+  stockRecords        MedicationStockRecord[]
+
+  @@index([companyId])
+  @@index([clientId])
+}
+
+model MedicationAdministration {
+  id                String    @id @default(uuid())
+  companyId         String
+  medicationId      String
+  medication        Medication @relation(fields: [medicationId], references: [id])
+  clientId          String
+  client            Client     @relation(fields: [clientId], references: [id])
+  staffId           String
+  staff             Staff      @relation(fields: [staffId], references: [id])
+  scheduledTime     DateTime
+  administeredTime  DateTime?
+  status            String    @default("Scheduled") // Scheduled, Administered, Refused, Not Given, Missed, Held, Cancelled
+  doseGiven         String?
+  notes             String?
+  refusalReason     String?
+  notGivenReason    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([medicationId])
+  @@index([clientId])
+  @@index([staffId])
+}
+
+model MedicationStockRecord {
+  id           String     @id @default(uuid())
+  companyId    String
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id])
+  staffId      String
+  recordedAt   DateTime   @default(now())
+  quantity     Float
+  notes        String?
+  type         String     @default("Manual Check") // Manual Check, Delivery, Return, Disposal
+
+  @@index([companyId])
+  @@index([medicationId])
+}
+
+model MedicationOrder {
+  id                      String                @id @default(uuid())
+  companyId               String
+  company                 Company               @relation(fields: [companyId], references: [id])
+  clientId                String
+  client                  Client                @relation(fields: [clientId], references: [id])
+  requestedByUserId       String?
+  orderedByUserId         String?
+  collectedByUserId       String?
+  receivedByUserId        String?
+  checkedByUserId         String?
+  pharmacyName            String?
+  prescriptionRequestDate DateTime?
+  orderDate               DateTime?
+  expectedCollectionDate  DateTime?
+  collectionDate          DateTime?
+  receivedDate            DateTime?
+  checkedDate             DateTime?
+  status                  String                @default("Draft") // Draft, Requested, Ordered, Ready for Collection, Collected, Received, Checked, Partially Received, Issue Reported, Cancelled
+  collectionMethod        String?               // Pharmacy Collection, Pharmacy Delivery, Family Collection, Staff Collection, Other
+  notes                   String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  items                   MedicationOrderItem[]
+
+  @@index([companyId])
+  @@index([clientId])
+}
+
+model MedicationOrderItem {
+  id                String          @id @default(uuid())
+  companyId         String
+  medicationOrderId String
+  order             MedicationOrder @relation(fields: [medicationOrderId], references: [id])
+  medicationId      String?
+  medication        Medication?     @relation(fields: [medicationId], references: [id])
+  medicationName    String
+  quantityRequested String
+  quantityReceived  String?
+  itemStatus        String          @default("Requested") // Requested, Received, Partially Received, Missing, Incorrect, Cancelled
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([companyId])
+  @@index([medicationOrderId])
+}
+
+model CarePlan {
+  id                        String    @id @default(uuid())
+  companyId                 String
+  company                   Company   @relation(fields: [companyId], references: [id])
+  clientId                  String
+  client                    Client    @relation(fields: [clientId], references: [id])
+  title                     String
+  status                    String    @default("Draft") // Draft, Active, Under Review, Superseded, Archived
+  version                   Int       @default(1)
+  summary                   String?
+  personalCareNeeds         String?
+  mobilityNeeds             String?
+  nutritionHydrationNeeds   String?
+  medicationSupportNeeds    String?
+  communicationNeeds        String?
+  continenceNeeds           String?
+  mentalHealthNeeds         String?
+  cognitionNeeds            String?
+  socialNeeds               String?
+  religiousCulturalNeeds    String?
+  risksSummary              String?
+  outcomes                  String?
+  preferences               String?
+  reviewDate                DateTime?
+  reviewedAt                DateTime?
+  archivedAt                DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([clientId])
+}
+
+model Audit {
+  id              String    @id @default(uuid())
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id])
+  title           String
+  auditType       String    // Medication Audit, MAR Chart Audit, etc.
+  auditorId       String
+  auditor         User      @relation(fields: [auditorId], references: [id])
+  linkedClientId  String?
+  linkedClient    Client?   @relation(fields: [linkedClientId], references: [id])
+  linkedStaffId   String?
+  linkedStaff     Staff?    @relation(fields: [linkedStaffId], references: [id])
+  auditDate       DateTime  @default(now())
+  reviewDate      DateTime?
+  status          String    @default("Draft") // Draft, In Progress, Completed, Reviewed, Archived
+  result          String?   // Compliant, Partially Compliant, Non-Compliant
+  score           Float?
+  findings        String?
+  recommendations String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  checklistItems  AuditChecklistItem[]
+
+  @@index([companyId])
+  @@index([auditorId])
+  @@index([linkedClientId])
+}
+
+model AuditChecklistItem {
+  id             String    @id @default(uuid())
+  auditId        String
+  audit          Audit     @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  question       String
+  answer         String    @default("N/A") // Pass, Fail, N/A
+  notes          String?
+  evidence       String?
+  requiresAction Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([auditId])
+}
+
+model Attachment {
+  id              String   @id @default(uuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  uploadedByUserId String
+  uploadedByUser   User     @relation("UserUploads", fields: [uploadedByUserId], references: [id])
+  entityType      String   // Client, Staff, Audit, Incident, CarePlan, Medication
+  entityId        String
+  fileName        String
+  fileType        String
+  fileUrl         String
+  fileSize        Int?
+  createdAt       DateTime @default(now())
+
+  @@index([companyId])
+  @@index([entityType, entityId])
+}
