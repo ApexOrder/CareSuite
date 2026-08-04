@@ -1,0 +1,266 @@
+/* CareSuite responsive shell
+ * Loaded after index.css so the existing desktop design remains unchanged.
+ */
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+@media (max-width: 767px) {
+  /* Remove the desktop sidebar offset from the application content. */
+  .ml-64 {
+    margin-left: 0 !important;
+  }
+
+  /* The current fixed desktop sidebar becomes a bottom navigation rail. */
+  div.w-64.border-r.fixed.left-0.top-0 {
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 80 !important;
+    width: 100% !important;
+    height: 4.75rem !important;
+    min-height: 4.75rem !important;
+    border-top: 1px solid rgba(6, 78, 59, 0.45) !important;
+    border-right: 0 !important;
+    background: rgba(10, 12, 11, 0.97) !important;
+    box-shadow: 0 -18px 45px rgba(0, 0, 0, 0.45) !important;
+    backdrop-filter: blur(18px);
+  }
+
+  div.w-64.border-r.fixed.left-0.top-0 > .p-6 {
+    width: 100%;
+    padding: 0.5rem !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  div.w-64.border-r.fixed.left-0.top-0 > .p-6::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide desktop brand and account footer inside the compact rail. */
+  div.w-64.border-r.fixed.left-0.top-0 > .p-6 > .flex.items-center.gap-3.mb-8,
+  div.w-64.border-r.fixed.left-0.top-0 > .mt-auto,
+  div.w-64.border-r.fixed.left-0.top-0 > .p-6 > .mt-8 {
+    display: none !important;
+  }
+
+  div.w-64.border-r.fixed.left-0.top-0 nav.space-y-1 {
+    display: flex !important;
+    width: max-content;
+    min-width: 100%;
+    gap: 0.35rem;
+  }
+
+  div.w-64.border-r.fixed.left-0.top-0 .sidebar-link {
+    display: flex !important;
+    min-width: 4.5rem;
+    height: 3.65rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem !important;
+    padding: 0.4rem 0.55rem !important;
+    border-radius: 0.8rem !important;
+    font-size: 0.62rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  div.w-64.border-r.fixed.left-0.top-0 .sidebar-link svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+  }
+
+  div.w-64.border-r.fixed.left-0.top-0 .sidebar-link span {
+    max-width: 4.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Leave enough room for the fixed mobile navigation rail. */
+  #root {
+    padding-bottom: 5.25rem;
+  }
+
+  /* Page spacing and headings. */
+  #root .p-8 {
+    padding: 1rem !important;
+  }
+
+  #root .p-6 {
+    padding: 1rem !important;
+  }
+
+  #root h1.text-3xl {
+    font-size: 1.65rem !important;
+    line-height: 1.08 !important;
+  }
+
+  #root h1.text-2xl,
+  #root h2.text-2xl {
+    font-size: 1.35rem !important;
+  }
+
+  /* PageHeader and other action rows should wrap instead of overflowing. */
+  #root .mb-10.flex.flex-col.md\:flex-row {
+    margin-bottom: 1.5rem !important;
+    gap: 1rem !important;
+  }
+
+  #root .mb-10.flex.flex-col.md\:flex-row > div:last-child,
+  #root .mb-8.flex.justify-between,
+  #root .flex.justify-between.items-center.mb-8 {
+    width: 100%;
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+
+  #root .mb-10.flex.flex-col.md\:flex-row > div:last-child > *,
+  #root .mb-8.flex.justify-between > div:last-child,
+  #root .flex.justify-between.items-center.mb-8 > div:last-child {
+    width: 100%;
+  }
+
+  #root .mb-10.flex.flex-col.md\:flex-row .flex.gap-3,
+  #root .mb-10.flex.flex-col.md\:flex-row .flex.items-center.gap-3,
+  #root .mb-8 .flex.gap-3 {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  #root .mb-10.flex.flex-col.md\:flex-row button,
+  #root .mb-8.flex.justify-between button {
+    min-height: 2.75rem;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  /* Forms and filters become full-width stacks. */
+  #root .flex.gap-4.mb-6,
+  #root .flex.gap-4.mb-8 {
+    flex-direction: column;
+  }
+
+  #root select,
+  #root input,
+  #root textarea,
+  #root button {
+    max-width: 100%;
+  }
+
+  #root select,
+  #root input:not([type='checkbox']):not([type='radio']),
+  #root textarea {
+    min-height: 2.75rem;
+    font-size: 16px !important; /* Prevent iOS form zoom. */
+  }
+
+  /* Tabs remain usable by scrolling horizontally. */
+  #root .flex.border-b {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  #root .flex.border-b::-webkit-scrollbar {
+    display: none;
+  }
+
+  #root .flex.border-b > button {
+    flex: 0 0 auto;
+    padding-right: 1rem !important;
+    padding-left: 1rem !important;
+    white-space: nowrap;
+  }
+
+  /* Data tables retain their information and scroll within the viewport. */
+  #root .overflow-x-auto {
+    width: 100%;
+    max-width: calc(100vw - 2rem);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root table {
+    min-width: 42rem;
+  }
+
+  #root th,
+  #root td {
+    padding: 0.75rem !important;
+  }
+
+  /* Hover-only row controls must remain visible on touch devices. */
+  #root .group .opacity-0.group-hover\:opacity-100 {
+    opacity: 1 !important;
+  }
+
+  /* Cards and activity rows should not force content off-screen. */
+  #root .premium-card,
+  #root .stat-card {
+    max-width: 100%;
+  }
+
+  #root .flex.justify-between.items-center,
+  #root .flex.justify-between.items-start {
+    column-gap: 0.75rem;
+  }
+
+  /* Dialogs use the full phone viewport while remaining scrollable. */
+  #root .fixed.inset-0 {
+    padding: 0.75rem !important;
+  }
+
+  #root .fixed.inset-0 > div,
+  #root .fixed.inset-0 > form {
+    max-height: calc(100dvh - 1.5rem);
+    overflow-y: auto;
+  }
+
+  #root .fixed.inset-0 .p-8 {
+    padding: 1.1rem !important;
+  }
+
+  /* Notification menu and toasts fit narrow screens. */
+  #root .absolute.right-0.mt-3.w-80 {
+    position: fixed !important;
+    top: 4rem !important;
+    right: 0.75rem !important;
+    left: 0.75rem !important;
+    width: auto !important;
+    margin-top: 0 !important;
+  }
+
+  #root > div.fixed.bottom-6.right-6 {
+    right: 0.75rem !important;
+    bottom: 5.5rem !important;
+    left: 0.75rem !important;
+  }
+
+  #root > div.fixed.bottom-6.right-6 > div,
+  #root > div.fixed.bottom-6.right-6 .min-w-\[300px\] {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1100px) {
+  #root .p-8 {
+    padding: 1.5rem !important;
+  }
+
+  #root .grid.xl\:grid-cols-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
