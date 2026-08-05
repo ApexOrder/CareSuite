@@ -9,8 +9,8 @@ const prisma = new PrismaClient();
 const jwtSecret = process.env.JWT_SECRET || 'caresuite-fallback-secret';
 
 type ClientIdentifierInput = {
-  nhsNumber?: string;
-  pidNumber?: string;
+  nhsNumber?: string | null;
+  pidNumber?: string | null;
 };
 
 function parseCookie(cookieHeader = ''): Record<string, string> {
@@ -42,9 +42,7 @@ function getCompanyId(req: Request): string | null {
 function normaliseNhsNumber(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;
   const digits = String(value).replace(/\D/g, '');
-  if (digits.length !== 10) {
-    throw new Error('NHS number must contain exactly 10 digits');
-  }
+  if (digits.length !== 10) throw new Error('NHS number must contain exactly 10 digits');
   return digits;
 }
 
@@ -71,12 +69,14 @@ async function clientIdentifierMiddleware(req: Request, res: Response, next: Nex
   if (!companyId) return next();
 
   let identifiers: ClientIdentifierInput | null = null;
+  const isCreateOrEdit = req.method === 'POST' || req.method === 'PUT';
+  const hasIdentifierInput = req.body && typeof req.body === 'object' && ('nhsNumber' in req.body || 'pidNumber' in req.body);
 
-  if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body && typeof req.body === 'object') {
+  if (isCreateOrEdit && hasIdentifierInput) {
     try {
       identifiers = {
-        nhsNumber: normaliseNhsNumber(req.body.nhsNumber) ?? undefined,
-        pidNumber: normalisePidNumber(req.body.pidNumber) ?? undefined,
+        nhsNumber: normaliseNhsNumber(req.body.nhsNumber),
+        pidNumber: normalisePidNumber(req.body.pidNumber),
       };
       delete req.body.nhsNumber;
       delete req.body.pidNumber;
@@ -92,13 +92,13 @@ async function clientIdentifierMiddleware(req: Request, res: Response, next: Nex
         if (identifiers && payload?.id && res.statusCode < 400) {
           await prisma.$executeRawUnsafe(
             `UPDATE "Client" SET "nhsNumber" = $1, "pidNumber" = $2 WHERE "id" = $3 AND "companyId" = $4`,
-            identifiers.nhsNumber ?? null,
-            identifiers.pidNumber ?? null,
+            identifiers.nhsNumber,
+            identifiers.pidNumber,
             payload.id,
             companyId,
           );
-          payload.nhsNumber = identifiers.nhsNumber ?? null;
-          payload.pidNumber = identifiers.pidNumber ?? null;
+          payload.nhsNumber = identifiers.nhsNumber;
+          payload.pidNumber = identifiers.pidNumber;
         }
 
         const records = Array.isArray(payload) ? payload : payload?.id ? [payload] : [];
@@ -111,10 +111,17 @@ async function clientIdentifierMiddleware(req: Request, res: Response, next: Nex
         if (Array.isArray(payload) && req.method === 'GET') {
           const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
           if (search) {
+            const archived = req.query.archived;
+            const archiveClause = archived === 'true'
+              ? 'AND "archivedAt" IS NOT NULL'
+              : archived === 'all'
+                ? ''
+                : 'AND "archivedAt" IS NULL';
+
             const matches = await prisma.$queryRawUnsafe<any[]>(
               `SELECT * FROM "Client"
                WHERE "companyId" = $1
-                 AND "archivedAt" IS NULL
+                 ${archiveClause}
                  AND ("nhsNumber" ILIKE $2 OR "pidNumber" ILIKE $2)`,
               companyId,
               `%${search}%`,
