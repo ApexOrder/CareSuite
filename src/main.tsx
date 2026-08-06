@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import './mobile.css';
 import { enableClientOnlyMode } from './clientOnlyMode';
+import { enableSimplifiedClientRegistration } from './simplifiedClientRegistration';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -12,3 +13,4 @@ createRoot(document.getElementById('root')!).render(
 );
 
 enableClientOnlyMode();
+enableSimplifiedClientRegistration();
