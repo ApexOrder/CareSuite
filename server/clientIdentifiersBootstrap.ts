@@ -8,9 +8,10 @@ dotenv.config();
 const prisma = new PrismaClient();
 const jwtSecret = process.env.JWT_SECRET || 'caresuite-fallback-secret';
 
-type ClientIdentifierInput = {
+type ClientSupplementalInput = {
   nhsNumber?: string | null;
   pidNumber?: string | null;
+  packageStartDate?: Date | null;
 };
 
 function parseCookie(cookieHeader = ''): Record<string, string> {
@@ -53,35 +54,55 @@ function normalisePidNumber(value: unknown): string | null {
   return pid;
 }
 
-async function getIdentifiers(ids: string[]): Promise<Map<string, ClientIdentifierInput>> {
+function normalisePackageStartDate(value: unknown): Date | null {
+  if (value === undefined || value === null || value === '') return null;
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) throw new Error('Package start date is invalid');
+  return date;
+}
+
+async function getSupplementalFields(ids: string[]): Promise<Map<string, ClientSupplementalInput>> {
   if (!ids.length) return new Map();
-  const rows = await prisma.$queryRawUnsafe<Array<{ id: string; nhsNumber: string | null; pidNumber: string | null }>>(
-    `SELECT "id", "nhsNumber", "pidNumber" FROM "Client" WHERE "id" = ANY($1::text[])`,
+  const rows = await prisma.$queryRawUnsafe<Array<{
+    id: string;
+    nhsNumber: string | null;
+    pidNumber: string | null;
+    packageStartDate: Date | null;
+  }>>(
+    `SELECT "id", "nhsNumber", "pidNumber", "packageStartDate"
+     FROM "Client"
+     WHERE "id" = ANY($1::text[])`,
     ids,
   );
   return new Map(rows.map(row => [row.id, row]));
 }
 
-async function clientIdentifierMiddleware(req: Request, res: Response, next: NextFunction) {
+async function clientSupplementalMiddleware(req: Request, res: Response, next: NextFunction) {
   if (!req.path.startsWith('/api/clients')) return next();
 
   const companyId = getCompanyId(req);
   if (!companyId) return next();
 
-  let identifiers: ClientIdentifierInput | null = null;
+  let supplemental: ClientSupplementalInput | null = null;
   const isCreateOrEdit = req.method === 'POST' || req.method === 'PUT';
-  const hasIdentifierInput = req.body && typeof req.body === 'object' && ('nhsNumber' in req.body || 'pidNumber' in req.body);
+  const hasSupplementalInput = req.body && typeof req.body === 'object' && (
+    'nhsNumber' in req.body ||
+    'pidNumber' in req.body ||
+    'packageStartDate' in req.body
+  );
 
-  if (isCreateOrEdit && hasIdentifierInput) {
+  if (isCreateOrEdit && hasSupplementalInput) {
     try {
-      identifiers = {
+      supplemental = {
         nhsNumber: normaliseNhsNumber(req.body.nhsNumber),
         pidNumber: normalisePidNumber(req.body.pidNumber),
+        packageStartDate: normalisePackageStartDate(req.body.packageStartDate),
       };
       delete req.body.nhsNumber;
       delete req.body.pidNumber;
+      delete req.body.packageStartDate;
     } catch (error) {
-      return res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid client identifiers' });
+      return res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid client details' });
     }
   }
 
@@ -89,22 +110,28 @@ async function clientIdentifierMiddleware(req: Request, res: Response, next: Nex
   res.json = ((payload: any) => {
     void (async () => {
       try {
-        if (identifiers && payload?.id && res.statusCode < 400) {
+        if (supplemental && payload?.id && res.statusCode < 400) {
           await prisma.$executeRawUnsafe(
-            `UPDATE "Client" SET "nhsNumber" = $1, "pidNumber" = $2 WHERE "id" = $3 AND "companyId" = $4`,
-            identifiers.nhsNumber,
-            identifiers.pidNumber,
+            `UPDATE "Client"
+             SET "nhsNumber" = $1,
+                 "pidNumber" = $2,
+                 "packageStartDate" = $3
+             WHERE "id" = $4 AND "companyId" = $5`,
+            supplemental.nhsNumber,
+            supplemental.pidNumber,
+            supplemental.packageStartDate,
             payload.id,
             companyId,
           );
-          payload.nhsNumber = identifiers.nhsNumber;
-          payload.pidNumber = identifiers.pidNumber;
+          payload.nhsNumber = supplemental.nhsNumber;
+          payload.pidNumber = supplemental.pidNumber;
+          payload.packageStartDate = supplemental.packageStartDate;
         }
 
         const records = Array.isArray(payload) ? payload : payload?.id ? [payload] : [];
-        const idMap = await getIdentifiers(records.map(record => record.id).filter(Boolean));
+        const supplementalMap = await getSupplementalFields(records.map(record => record.id).filter(Boolean));
         for (const record of records) {
-          const values = idMap.get(record.id);
+          const values = supplementalMap.get(record.id);
           if (values) Object.assign(record, values);
         }
 
@@ -135,7 +162,7 @@ async function clientIdentifierMiddleware(req: Request, res: Response, next: Nex
 
         originalJson(payload);
       } catch (error) {
-        console.error('[CLIENT IDENTIFIERS]', error);
+        console.error('[CLIENT SUPPLEMENTAL FIELDS]', error);
         originalJson(payload);
       }
     })();
@@ -150,9 +177,9 @@ const originalUse = application.use;
 application.use = function patchedUse(...args: any[]) {
   const result = originalUse.apply(this, args);
   const includesJsonParser = args.some(arg => typeof arg === 'function' && arg.name === 'jsonParser');
-  if (includesJsonParser && !this.__clientIdentifiersInstalled) {
-    this.__clientIdentifiersInstalled = true;
-    originalUse.call(this, clientIdentifierMiddleware);
+  if (includesJsonParser && !this.__clientSupplementalInstalled) {
+    this.__clientSupplementalInstalled = true;
+    originalUse.call(this, clientSupplementalMiddleware);
   }
   return result;
 };
